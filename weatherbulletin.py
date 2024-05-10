@@ -12,14 +12,23 @@ import yaml
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-logging.basicConfig(filename='weather.log', encoding='utf-8', level=logging.DEBUG)
-
 try:
     with open("config.yaml", "r", encoding="utf-8") as f:
         SETTINGS = yaml.safe_load(f)
 except FileNotFoundError:
     logging.critical("Error: config.yaml cannot be found. Exiting.")
     sys.exit(1)
+
+match SETTINGS['logging_level']:
+    case 'info':
+        logging.basicConfig(filename=SETTINGS['logging_file'], encoding='utf-8', level=logging.INFO)
+    case 'debug':
+        logging.basicConfig(filename=SETTINGS['logging_file'], encoding='utf-8', level=logging.DEBUG)
+    case 'warn':
+        logging.basicConfig(filename=SETTINGS['logging_file'], encoding='utf-8', level=logging.WARN)
+    case _:
+        logging.basicConfig(filename=SETTINGS['logging_file'], encoding='utf-8', level=logging.ERROR)
+
 
 # Set up Google TTS client
 credentials = service_account.Credentials.from_service_account_file(
@@ -248,24 +257,24 @@ def bulletin_metoffice() -> str:
         # Generate overnight bulletin
         logging.info("Generating overnight bulletin")
         overnight_weather = metoffice_weather_codes_to_str(
-            forecast[tomorrow]["overnight"]["weather_code"], "night"
+            forecast[today]["overnight"]["weather_code"], "night"
         )
-        tomorrow_morning_weather = metoffice_weather_codes_to_str(
-            forecast[tomorrow]["morning"]["weather_code"], "day"
+        morning_weather = metoffice_weather_codes_to_str(
+            forecast[today]["morning"]["weather_code"], "day"
         )
-        tomorrow_afternoon_weather = metoffice_weather_codes_to_str(
-            forecast[tomorrow]["afternoon"]["weather_code"], "day"
+        afternoon_weather = metoffice_weather_codes_to_str(
+            forecast[today]["afternoon"]["weather_code"], "day"
         )
         temps_tomorrow = temps[tomorrow]
         bulletin = (
-            f"{overnight_weather} overnight with lows of {temps_tomorrow['low']} degrees. "
+            f"{overnight_weather} tonight, with lows of {temps_tomorrow['low']} degrees. "
         )
-        if tomorrow_morning_weather == tomorrow_afternoon_weather:
-            bulletin += f"Tomorrow we are expecting {tomorrow_morning_weather}, "
+        if morning_weather == afternoon_weather:
+            bulletin += f"Tomorrow it should be {morning_weather}, "
             bulletin += f"with temperatures reaching highs of {temps_tomorrow['high']} degrees."
         else:
-            bulletin += f"Tomorrow morning will start with {tomorrow_morning_weather}, "
-            bulletin += f"{tomorrow_afternoon_weather} later on, highs of {temps_tomorrow['high']}."
+            bulletin += f"Tomorrow morning it should be {morning_weather}, "
+            bulletin += f"with {afternoon_weather} later on, highs of {temps_tomorrow['high']}."
 
     return bulletin
 
@@ -306,7 +315,7 @@ def metoffice_weather_codes_to_str(codes, part) -> str:
     }
     weather = ""
     i = 0
-    day_skip_codes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 15, 18, 21, 24, 27, 30}
+    day_skip_codes = {1, 3, 4, 5, 6, 7, 8, 11, 12, 15, 18, 21, 24, 27, 30}
     night_skip_codes = {0, 9, 10, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 28, 29}
 
     if part == "night":
@@ -316,11 +325,12 @@ def metoffice_weather_codes_to_str(codes, part) -> str:
 
     # Deduplicate similar weather codes
     for code in codes[:]:
-        # Remove cloudy skies if sunny with clouds appear.
         if code == 7 and 3 in codes:
-            codes.remove(7)
+            codes.remove(7)  # Remove cloudy skies if sunny with clouds appear.
         if code == 2 and 3 in codes:
-            codes.remove(2)
+            codes.remove(3)  # Remove sunny with clouds if partially cloudy appear.
+        if code == 1 and 3 in codes:
+            codes.remove(1)  # Remove clear and sunny if sunny with clouds appear.
 
     for code in codes:
         if code in codes_to_skip:
