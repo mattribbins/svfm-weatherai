@@ -1,0 +1,10 @@
+# Ignore credential files
+config.yaml
+credentials.json
+
+# Test files
+out.wav
+*.log
+
+# Others
+.DS_Store
