@@ -5,3 +5,6 @@ lat: "51.2852"
 long: "-2.4859"
 
 output_file: './out.wav'
+
+logging_level: 'warn'
+logging_file: './weather.log'
