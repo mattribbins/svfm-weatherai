@@ -54,8 +54,7 @@ class MetOfficeWeatherForecast:
             return "afternoon"
         if 18 <= hour < 24:
             return "evening"
-        else:
-            return "overnight"
+        return "overnight"
 
     def _get_day_periods(self, daily_data):
         day_periods = {"morning": [], "afternoon": [], "evening": [], "overnight": []}
