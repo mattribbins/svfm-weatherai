@@ -50,9 +50,9 @@ class MetOfficeWeatherForecast:
         hour = int(the_time.split("T")[1].split(":")[0])
         if 6 <= hour < 12:
             return "morning"
-        elif 12 <= hour < 18:
+        if 12 <= hour < 18:
             return "afternoon"
-        elif 18 <= hour < 24:
+        if 18 <= hour < 24:
             return "evening"
         else:
             return "overnight"
